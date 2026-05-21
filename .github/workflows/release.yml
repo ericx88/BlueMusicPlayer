@@ -30,6 +30,7 @@ jobs:
         run: npm install
 
       - name: Install pkg and Build Windows Sidecar
+        shell: bash
         run: |
           npm install -g pkg
           # 创建 bin 目录（如果不存在）
