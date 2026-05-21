@@ -1,0 +1,50 @@
+name: 'Release'
+
+on:
+  push:
+    tags:
+      - 'v*' # 当您推送形如 v1.0.0 的 tag 时触发构建
+  workflow_dispatch: # 允许您在 GitHub Actions 页面手动点击运行
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install Frontend Dependencies
+        run: npm install
+
+      - name: Install pkg and Build Windows Sidecar
+        run: |
+          npm install -g pkg
+          # 创建 bin 目录（如果不存在）
+          mkdir -p src-tauri/bin
+          # 打包出 Windows 版的可执行 API Sidecar
+          pkg scripts/api-sidecar.js --targets node18-win-x64 --output src-tauri/bin/api-sidecar-x86_64-pc-windows-msvc.exe
+
+      - name: Build and Release Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: app-v__VERSION__ # 该 action 会自动将 __VERSION__ 替换为 package.json 或 tauri.conf.json 中的版本号
+          releaseName: 'BlueMusicPlayer v__VERSION__'
+          releaseBody: 'BlueMusicPlayer Windows 安装包'
+          releaseDraft: false
+          prerelease: false
+          args: --target x86_64-pc-windows-msvc

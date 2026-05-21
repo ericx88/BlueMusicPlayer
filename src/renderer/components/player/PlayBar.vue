@@ -164,6 +164,16 @@
         </template>
         {{ t('player.playBar.playList') }}
       </n-tooltip>
+
+      <n-tooltip trigger="hover" :z-index="9999999">
+        <template #trigger>
+          <i
+            class="ri-fullscreen-fill text-2xl hover:text-green-500 transition-colors cursor-pointer ml-3"
+            @click="$router.push('/immersive')"
+          ></i>
+        </template>
+        沉浸模式
+      </n-tooltip>
     </div>
     <!-- 全屏播放器 -->
     <music-full-wrapper ref="MusicFullRef" v-model="musicFullVisible" :background="background" />

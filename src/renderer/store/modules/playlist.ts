@@ -3,6 +3,7 @@ import { debounce } from 'lodash';
 import { createDiscreteApi } from 'naive-ui';
 import { defineStore, storeToRefs } from 'pinia';
 import { computed, ref, shallowRef, triggerRef } from 'vue';
+import { listen } from '@tauri-apps/api/event';
 
 import i18n from '@/../i18n/renderer';
 import { useSongDetail } from '@/hooks/usePlayerHooks';
@@ -83,6 +84,7 @@ export const usePlaylistStore = defineStore(
     const playMode = ref(0);
     const originalPlayList = shallowRef<SongResult[]>([]);
     const playListDrawerVisible = ref(false);
+    const pendingPlaylistId = ref<string | null>(null);
 
     // 连续失败计数器（用于防止无限循环）
     const consecutiveFailCount = ref(0);
@@ -473,6 +475,38 @@ export const usePlaylistStore = defineStore(
           return;
         }
 
+        // 检查是否有定时切换歌单挂起
+        if (autoEnd && pendingPlaylistId.value) {
+            const targetId = pendingPlaylistId.value;
+            pendingPlaylistId.value = null; // 清除挂起状态
+            console.log(`[nextPlay] 触发定时切换歌单: ${targetId}`);
+            try {
+                const { getListDetail } = await import('@/api/list');
+                const res = await getListDetail(targetId);
+                const tracks = res.data?.playlist?.tracks || [];
+                if (tracks.length > 0) {
+                    const mappedTracks = tracks.map((song: any) => ({
+                        id: song.id,
+                        name: song.name,
+                        picUrl: song.al?.picUrl || song.album?.picUrl,
+                        ar: song.artists || song.ar,
+                        al: song.al || song.album,
+                        source: 'netease',
+                        song,
+                        ...song
+                    }));
+                    setPlayList(mappedTracks, false, false);
+                    const { playTrack } = await import('@/services/playbackController');
+                    await playTrack(mappedTracks[0], true);
+                    return;
+                } else {
+                    console.error('[nextPlay] 获取的新歌单为空');
+                }
+            } catch (err) {
+                console.error('[nextPlay] 获取新歌单失败，降级播放原列表:', err);
+            }
+        }
+
         if (playList.value.length === 0) return;
 
         // User-initiated (retryCount=0): reset state
@@ -698,6 +732,12 @@ export const usePlaylistStore = defineStore(
      * 这里只需要处理特殊逻辑（如随机模式的恢复）
      */
     const initializePlaylist = async () => {
+      // 监听 Tauri 发送的定时切换歌单事件
+      listen<{ playlist_id: string }>('switch-playlist', (event) => {
+        console.log('[PlaylistStore] 收到切换歌单事件', event.payload);
+        pendingPlaylistId.value = event.payload.playlist_id;
+      });
+
       // 重启后恢复随机播放状态
       if (playMode.value === 2 && playList.value.length > 0) {
         if (originalPlayList.value.length === 0) {

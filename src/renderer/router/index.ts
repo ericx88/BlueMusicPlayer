@@ -46,6 +46,12 @@ const routes = [
     component: () => import('@/views/lyric/index.vue')
   },
   {
+    path: '/immersive',
+    name: 'immersive',
+    meta: { title: '沉浸模式', keepAlive: true },
+    component: () => import('@/views/ImmersivePlayer.vue')
+  },
+  {
     path: '/mini',
     component: MiniLayout
   }

@@ -38,5 +38,10 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     proxy: {}
+  },
+  build: {
+    outDir: '../../dist',
+    emptyOutDir: true,
+    target: 'esnext'
   }
 });

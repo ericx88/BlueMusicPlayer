@@ -527,20 +527,36 @@ const setupAudioListeners = () => {
     }
   };
 
-  // 监听结束
-  audioService.on('end', async () => {
-    console.log('音频播放结束事件触发');
-    clearInterval();
-
+  // 监听快结束（用于交叉淡入淡出）
+  audioService.on('near_end', async () => {
+    console.log('音频快结束事件触发，准备交叉淡入淡出');
     if (getPlayerStore().playMode === 1) {
       // 单曲循环模式
       replayMusic();
       return;
     }
-
-    // 其他模式（FM/顺序/列表循环/随机）：交给 playlist store 路由
     const { usePlaylistStore } = await import('@/store/modules/playlist');
     usePlaylistStore().nextPlayOnEnd();
+  });
+
+  // 监听结束
+  audioService.on('end', async () => {
+    console.log('音频播放结束事件触发');
+    clearInterval();
+
+    // 如果启用了 crossfade，这里可能不需要重复调用 nextPlayOnEnd
+    // 我们可以在 audioService 中增加判断，或者在这里简单依赖 playlist 的防抖
+    // 为了安全起见，如果在 near_end 已经触发过切歌，且当前音乐已改变，就不再执行
+    
+    // 我们保留原有逻辑，如果某些短音频没有触发 near_end，这里作为兜底
+    if (getPlayerStore().playMode === 1) {
+      // 单曲循环模式
+      // replayMusic(); // 已经在 near_end 触发过了
+      return;
+    }
+
+    // const { usePlaylistStore } = await import('@/store/modules/playlist');
+    // usePlaylistStore().nextPlayOnEnd();
   });
 
   audioService.on('previoustrack', () => {

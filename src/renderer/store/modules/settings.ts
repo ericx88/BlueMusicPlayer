@@ -2,7 +2,7 @@ import { cloneDeep, isArray, mergeWith } from 'lodash';
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 
-import setDataDefault from '@/../main/set.json';
+const setDataDefault = {};
 import homeRouter from '@/router/home';
 import { useMenuStore } from '@/store/modules/menu';
 import { isElectron } from '@/utils';
